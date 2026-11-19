@@ -16,15 +16,27 @@
 
 ## 🚀 快速开始
 
-1. 下载本仓库，或到 [Latest Release](https://github.com/Devilstore/Glados-Railgun-checkin/releases/latest) 下载扩展压缩包并解压。
-2. 打开 `edge://extensions`（Chrome 为 `chrome://extensions`），开启「开发人员模式」。
-3. 点「加载解压缩的扩展」，选择 `extension/` 目录。
-4. 打开设置页，点「+ 添加账号」：
-   - 主账号选「浏览器登录态」，不需要填 Cookie；
-   - 其他账号选「手动填 Cookie」。
-5. 保存后点「立即签到」；需要自动运行时在「设置」里配置签到时段。
+在 GitHub 仓库页面点击「Code → Download ZIP」，下载源码并解压。
 
-> 首次安装会自动打开设置页。扩展必须在浏览器运行时才能签到。
+### Edge 和 Chrome
+
+1. 打开 `edge://extensions`（Chrome 为 `chrome://extensions`），开启「开发人员模式」。
+2. 点击「加载解压缩的扩展」，选择源码中的 `extension/` 目录。
+
+### Firefox 128 及以上
+
+1. 在解压后的仓库根目录运行下面的命令，生成 `glados-checkin-extension-firefox-v1.1.0.zip`。Windows 上也可以把 `python` 换成 `py`。
+
+   ```sh
+   python extension/package_firefox.py
+   ```
+
+2. 在 Firefox 打开 `about:debugging`，进入「此 Firefox」，点击「临时载入附加组件」。
+3. 选择生成的 Firefox ZIP 文件，直接载入。浏览器重启后需要重新载入。长期安装需要 Mozilla 签名的 `.xpi`。 [Mozilla 临时安装说明](https://extensionworkshop.com/documentation/develop/temporary-installation-in-firefox/)
+
+### 添加账号
+
+首次安装会打开设置页。点击「+ 添加账号」，主账号可选择「浏览器登录态」，其他账号可使用「手动填 Cookie」。保存后点「立即签到」。需要自动运行时，在「设置」里配置签到时段并保持浏览器运行。
 
 ## ⚙️ 配置
 
@@ -70,7 +82,7 @@ railgun.info
 | 页面停留 | 拟人停留，最低 2.5 秒 |
 | 今日已签则跳过 | 避免重复签到 |
 | 桌面通知 | 全部任务完成后汇总通知 |
-| 远程推送 | PushDeer / ServerChan |
+| 远程推送 | PushDeer / ServerChan / PushPlus |
 
 自动重试：
 
@@ -84,7 +96,10 @@ railgun.info
 支持：
 
 - PushDeer SendKey；
-- ServerChan SendKey。
+- ServerChan SendKey；
+- PushPlus Token（在 [PushPlus 一对一消息](https://www.pushplus.plus/push1.html) 获取用户 Token 或消息 Token）。
+
+填入 Token 后点「保存推送配置」，再点「发送测试推送」验证。
 
 配置后，批量签到结束发送一条汇总；单账号手动签到即时发送。  
 推送格式与 Python 脚本一致：
@@ -97,13 +112,13 @@ GLaDOS 签到 · 成功 1 · 失败 1 · 重复 1
 #3  账号3  🔴 签到失败  glados.cloud  获得 0 积分 · 剩余 None 天 · 总 None 积分
 ```
 
-推送配置独立于桌面通知；两个 SendKey 都留空则不推送。
+推送配置独立于桌面通知，所有推送凭据都留空时跳过远程推送。
 
 ## 🔒 数据与权限
 
-- 账号、Cookie、推送 Key、日志只保存在本机浏览器，不会上传到任何服务器；
-- Cookie 和 SendKey 为明文存储，请勿分享浏览器 Profile；
-- 除 GLaDOS 接口外，只会在配置推送后请求 PushDeer / ServerChan；
+- 账号、Cookie、推送凭据和日志保存在本机浏览器；
+- Cookie 和推送凭据为明文存储，请勿分享浏览器 Profile；
+- 启用远程推送后，扩展会将对应的推送凭据和签到摘要发给配置的 PushDeer、ServerChan 或 PushPlus 服务；
 - 扩展不在页面中注入广告，不加载远程代码。
 
 主要权限：
@@ -121,13 +136,10 @@ GLaDOS 签到 · 成功 1 · 失败 1 · 重复 1
 
 ## 🔄 版本与更新
 
-当前版本：`1.0.1`。
+当前版本为 `1.1.0`。
 
-- `extension/` 目录始终是最新源码；
-- 发布包按版本命名，例如 `glados-checkin-extension-v1.0.1.zip`；
-- 升级时替换 `extension/` 内容，到 `edge://extensions` 点「重新加载」；
-- 加载目录不变时扩展 ID 不变，账号数据保留；
-- 下载发布包请以 GitHub Releases 的 **Latest** 为准。
+- **Edge 和 Chrome**：更新原加载目录中的扩展文件，再到扩展管理页点击「重新加载」。加载目录保持不变时可保留账号数据。
+- **Firefox**：用新源码重新生成 ZIP，再从「此 Firefox」页移除旧的临时扩展并载入新版。
 
 ## ❓常见问题
 

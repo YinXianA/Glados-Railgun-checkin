@@ -1088,6 +1088,7 @@ class Config:
 
     ENV_PUSH_KEY = "PUSHDEER_SENDKEY"
     ENV_SERVERCHAN_KEY = "SERVERCHAN_SENDKEY"
+    ENV_PUSHPLUS_TOKEN = "PUSHPLUS_TOKEN"
     ENV_COOKIES = "GLADOS_COOKIES"
     ENV_EXCHANGE_PLAN = "GLADOS_EXCHANGE_PLAN"
     ENV_VERBOSE = "GLADOS_VERBOSE"
@@ -1099,6 +1100,7 @@ class Config:
         self.env = env if env is not None else os.environ
         self.push_key = ""
         self.serverchan_key = ""
+        self.pushplus_token = ""
         self.accounts = Accounts()
         self.exchange_plan = self.DEFAULT_EXCHANGE_PLAN
         self.verbose = self.DEFAULT_VERBOSE
@@ -1125,7 +1127,11 @@ class Config:
         logger.info(f"{LogEmoji.INFO} 共加载了 {len(self.accounts)} 个账号用于签到。")
         for account in self.accounts:
             logger.info(f"{LogEmoji.INFO} {LogEmoji.COOKIE}[{account.label}] {LogEmoji.DOMAIN}[{account.origin or '待探测'}] UA={'自定义' if account.user_agent else '默认'}")
-        logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_PUSH_KEY} {'已设置' if self.push_key else '未设置'}，" f"{self.ENV_SERVERCHAN_KEY} {'已设置' if self.serverchan_key else '未设置'}。")
+        logger.info(
+            f"{LogEmoji.INFO} 当前 {self.ENV_PUSH_KEY} {'已设置' if self.push_key else '未设置'}，"
+            f"{self.ENV_SERVERCHAN_KEY} {'已设置' if self.serverchan_key else '未设置'}，"
+            f"{self.ENV_PUSHPLUS_TOKEN} {'已设置' if self.pushplus_token else '未设置'}。"
+        )
         logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_EXCHANGE_PLAN}: {self.exchange_plan}。")
         logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_VERBOSE}: {self.verbose}。")
 
@@ -1133,7 +1139,11 @@ class Config:
         return (self.env.get(key) or "").strip()
 
     def _load_push_keys(self) -> None:
-        for key, env_name in (("push_key", self.ENV_PUSH_KEY), ("serverchan_key", self.ENV_SERVERCHAN_KEY)):
+        for key, env_name in (
+            ("push_key", self.ENV_PUSH_KEY),
+            ("serverchan_key", self.ENV_SERVERCHAN_KEY),
+            ("pushplus_token", self.ENV_PUSHPLUS_TOKEN),
+        ):
             value = self._get(env_name)
             setattr(self, key, value)
             if not value:
@@ -1293,6 +1303,52 @@ class ServerChanBackend(PushBackend):
             return False
 
 
+class PushPlusBackend(PushBackend):
+    """PushPlus 后端"""
+
+    name = "PushPlus"
+
+    def __init__(self, token: str):
+        self.token = token
+
+    def send(self, report: Report) -> bool:
+        try:
+            response = requests.post(
+                "https://www.pushplus.plus/send",
+                json={
+                    "token": self.token,
+                    "title": report.title,
+                    "content": self._render(report),
+                    "template": "txt",
+                },
+                timeout=10,
+                allow_redirects=False,
+            )
+        except requests.RequestException as e:
+            logger.error(f"{LogEmoji.ERROR} [{self.name}] 推送请求失败: {type(e).__name__}")
+            return False
+
+        if not 200 <= response.status_code < 300:
+            logger.error(f"{LogEmoji.ERROR} [{self.name}] 推送失败: HTTP {response.status_code}")
+            return False
+
+        try:
+            data = response.json()
+        except ValueError:
+            data = None
+
+        code = data.get("code") if isinstance(data, dict) else None
+        if code in (200, "200"):
+            return True
+
+        # 不记录服务端返回的正文，避免泄露令牌或推送内容。
+        if re.fullmatch(r"[0-9]{3}", str(code)):
+            logger.error(f"{LogEmoji.ERROR} [{self.name}] 推送失败: 接口返回码 {code}")
+        else:
+            logger.error(f"{LogEmoji.ERROR} [{self.name}] 推送失败: 接口响应格式异常")
+        return False
+
+
 class PushService:
     """聚合多个推送后端，向全部已配置的后端发送（都发）"""
 
@@ -1304,6 +1360,8 @@ class PushService:
             self.backends.append(PushDeerBackend(config.push_key))
         if config.serverchan_key:
             self.backends.append(ServerChanBackend(config.serverchan_key))
+        if config.pushplus_token:
+            self.backends.append(PushPlusBackend(config.pushplus_token))
 
     def send(self, report: Report) -> bool:
         """向所有已配置后端发送，任一成功即视为成功"""

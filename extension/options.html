@@ -14,7 +14,7 @@
       <img src="icons/icon48.png" alt="" class="brand-logo">
       <div class="brand-text">
         <strong>GLaDOS 自动签到</strong>
-        <span id="brandVersion">v1.0.1</span>
+        <span id="brandVersion">v1.1.0</span>
       </div>
     </div>
 
@@ -231,6 +231,13 @@
           <input type="password" id="serverchanKey" class="input" autocomplete="off"
                  placeholder="SCT...；留空不启用">
           <div class="field-hint">ServerChan 的 SendKey，签到结果会推送到微信。</div>
+        </div>
+
+        <div class="field">
+          <label for="pushplusToken">PushPlus Token</label>
+          <input type="password" id="pushplusToken" class="input" autocomplete="off"
+                 placeholder="留空不启用">
+          <div class="field-hint">在 PushPlus 的「一对一消息」页面获取用户 Token 或消息 Token。</div>
         </div>
 
         <div class="form-actions">

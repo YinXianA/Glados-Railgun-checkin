@@ -1,5 +1,5 @@
 /**
- * background.js —— GLaDOS 自动签到（MV3 Service Worker）
+ * background.js —— GLaDOS 自动签到（MV3 后台脚本）
  * session 模式复用浏览器会话；cookie 模式通过 DNR 仅注入临时标签页。
  */
 
@@ -12,13 +12,17 @@
 const ALL_RESOURCE_TYPES = [
   'main_frame', 'sub_frame', 'stylesheet', 'script', 'image', 'font',
   'object', 'xmlhttprequest', 'ping', 'csp_report', 'media', 'websocket',
-  'webtransport', 'webbundle', 'other'
+  'other'
 ];
+// Firefox 的网络规则不识别 Chromium 专有的资源类型。
+if (!globalThis.browser?.runtime?.getBrowserInfo) {
+  ALL_RESOURCE_TYPES.push('webtransport', 'webbundle');
+}
 
 const RULE_ID_BASE = 700000;
 const LOG_LIMIT = 300;
 
-const EXT_VERSION = '1.0.1';
+const EXT_VERSION = '1.1.0';
 
 
 const DEFAULT_SITES = [
@@ -78,6 +82,7 @@ const DEFAULT_SETTINGS = {
   skipIfDone: true,       // 今日已签则跳过
   pushdeerKey: '',        // PushDeer SendKey
   serverchanKey: '',      // ServerChan SendKey
+  pushplusToken: '',      // PushPlus Token
   minStayMs: 4500,        // 页面停留下限
   maxStayMs: 6500,        // 页面停留上限
   logRetention: LOG_LIMIT
@@ -1359,6 +1364,36 @@ async function sendPushNotification(settings, title, body) {
     }
   }
 
+  if (settings.pushplusToken) {
+    const t = timeout();
+    let result = { provider: 'PushPlus', ok: false, message: '推送请求失败' };
+    try {
+      const resp = await fetch('https://www.pushplus.plus/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: settings.pushplusToken, title, content: body, template: 'txt' }),
+        signal: t.signal,
+        redirect: 'error'
+      });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const code = data?.code;
+        result = {
+          provider: 'PushPlus',
+          ok: code === 200 || code === '200',
+          message: /^[0-9]{3}$/.test(String(code)) ? `接口返回码 ${code}` : '接口响应格式异常'
+        };
+      } else {
+        result.message = `HTTP ${resp.status}`;
+      }
+    } catch {
+      result.message = t.signal.aborted ? '推送请求超时' : '推送请求失败';
+    } finally {
+      t.done();
+    }
+    results.push(result);
+  }
+
   return results;
 }
 
@@ -1821,7 +1856,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({
             ok: results.length > 0 && results.every((r) => r.ok),
             results,
-            error: results.length ? '' : '未配置 PushDeer 或 ServerChan SendKey'
+            error: results.length ? '' : '未配置远程推送，请先保存至少一个渠道的凭据'
           });
           break;
         }

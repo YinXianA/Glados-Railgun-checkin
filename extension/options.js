@@ -401,6 +401,7 @@ function renderPush() {
   const s = STATE.settings || {};
   $('pushdeerKey').value = s.pushdeerKey || '';
   $('serverchanKey').value = s.serverchanKey || '';
+  $('pushplusToken').value = s.pushplusToken || '';
 }
 
 // ---------------------------------------------------------------- 渲染：日志
@@ -1022,7 +1023,8 @@ function bindEvents() {
   $('btnSavePush').addEventListener('click', async () => {
     const settings = Object.assign({}, STATE.settings || {}, {
       pushdeerKey: $('pushdeerKey').value.trim(),
-      serverchanKey: $('serverchanKey').value.trim()
+      serverchanKey: $('serverchanKey').value.trim(),
+      pushplusToken: $('pushplusToken').value.trim()
     });
     await send('saveState', { patch: { settings } });
     await reload();

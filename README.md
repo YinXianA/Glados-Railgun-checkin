@@ -4,12 +4,12 @@
 
 <p><sub>每天自动完成签到，结果可推送到手机。</sub></p>
 
-支持 **多账号** · **8 个域名** · **Cloudflare Turnstile**：可用 GitHub Actions 无人值守，也可用浏览器扩展在本机真实浏览器中签到。
+支持 **多账号** · **8 个域名** · **PushPlus 推送**。可通过 GitHub Actions 无人值守，也可在 Edge 或 Firefox 中使用扩展完成签到。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![GLaDOS Check-in](https://github.com/Devilstore/Glados-Railgun-checkin/actions/workflows/gladosCheck.yml/badge.svg?branch=master)](https://github.com/Devilstore/Glados-Railgun-checkin/actions/workflows/gladosCheck.yml)
-[![Last commit](https://img.shields.io/github/last-commit/Devilstore/Glados-Railgun-checkin?branch=master)](https://github.com/Devilstore/Glados-Railgun-checkin/commits/master)
+[![GLaDOS Check-in](https://github.com/YinXianA/Glados-Railgun-checkin/actions/workflows/gladosCheck.yml/badge.svg?branch=master)](https://github.com/YinXianA/Glados-Railgun-checkin/actions/workflows/gladosCheck.yml)
+[![Last commit](https://img.shields.io/github/last-commit/YinXianA/Glados-Railgun-checkin?branch=master)](https://github.com/YinXianA/Glados-Railgun-checkin/commits/master)
 
 [快速开始](#快速开始) · [浏览器扩展](#-浏览器扩展cloudflare-备用方案) · [账号配置](#配置-glados_cookies) · [积分兑换](#积分兑换) · [消息推送](#消息推送) · [问题排查](#问题排查) · [常见问题](#常见问题faq)
 
@@ -37,6 +37,7 @@
 | `GLADOS_COOKIES` | **是** | 账号列表，固定 JSON 数组，见[账号配置](#配置-glados_cookies) |
 | `PUSHDEER_SENDKEY` | 否 | PushDeer 推送，见[消息推送](#消息推送) |
 | `SERVERCHAN_SENDKEY` | 否 | Server酱 推送，见[消息推送](#消息推送) |
+| `PUSHPLUS_TOKEN` | 否 | PushPlus 推送，见[消息推送](#消息推送) |
 | `GLADOS_EXCHANGE_PLAN` | 否 | `plan100` / `plan200` / `plan500`，见[积分兑换](#积分兑换) |
 | `GLADOS_VERBOSE` | 否 | `true` / `1` / `yes` 输出详细日志 |
 
@@ -62,24 +63,12 @@ Actions 版是纯 HTTP 请求，**无法通过 Cloudflare Turnstile**。如果�
 
 ### 安装与使用
 
-1. 下载本仓库，或到 [Latest Release](https://github.com/Devilstore/Glados-Railgun-checkin/releases/latest) 下载扩展压缩包并解压；
-2. 打开 `edge://extensions`（Chrome 为 `chrome://extensions`），启用「开发人员模式」；
-3. 点「加载解压缩的扩展」，选择 `extension/` 目录；
-4. 打开扩展设置，点「+ 添加账号」：
-   - 主账号选「浏览器登录态」；
-   - 其他账号选「手动填 Cookie」；
-5. 保存后点「立即签到」，之后可在「设置」里配置自动签到、通知和推送。
+下载本仓库源码并解压，当前扩展版本为 **1.1.0**。
 
-完整说明见：[`extension/README.md`](extension/README.md)
+- **Edge**：打开 `edge://extensions`，开启「开发人员模式」，点「加载解压缩的扩展」，选择 `extension/` 目录。Chrome 可通过 `chrome://extensions` 使用同一目录。
+- **Firefox 128 及以上**：在仓库根目录运行 `python extension/package_firefox.py`。在 `about:debugging` 的「此 Firefox」页点击「临时载入附加组件」，选择生成的 `glados-checkin-extension-firefox-v1.1.0.zip`。Firefox 重启后需要重新载入。
 
-### 版本
-
-当前版本：`1.0.1`。
-
-- `extension/` 目录始终是**最新源码**，适合开发者和本地加载；
-- 发布包按版本号命名，例如 `glados-checkin-extension-v1.0.1.zip`；
-- 升级时替换 `extension/` 目录内容，到 `edge://extensions` 点「重新加载」即可，账号数据保留；
-- 不要把 `latest` 当成唯一文件名；以 GitHub Releases 的 **Latest** 为准，版本化包便于回退和排查。
+安装后打开扩展设置，添加账号并点击「立即签到」。在「设置 → 远程推送」填入 PushPlus Token，保存后可发送测试推送。 [扩展安装和配置说明](extension/README.md)
 
 Python / Actions 和扩展可以同时保留：Actions 负责无人值守，扩展负责 Cloudflare 限制下的本机补签。
 
@@ -148,8 +137,11 @@ Python / Actions 和扩展可以同时保留：Actions 负责无人值守，扩�
 | --- | --- | --- |
 | PushDeer | `PUSHDEER_SENDKEY` | [pushdeer.com](https://www.pushdeer.com/product.html) 下载 App，在 App 内获取 pushkey |
 | Server酱 | `SERVERCHAN_SENDKEY` | [sct.ftqq.com](https://sct.ftqq.com/) 微信扫码登录，在页面获取 SendKey |
+| PushPlus | `PUSHPLUS_TOKEN` | [PushPlus 一对一消息](https://www.pushplus.plus/push1.html) 登录并获取用户 Token 或消息 Token |
 
-两个可单独或同时配置（都发，任一成功即视为成功）；都不配则跳过推送，不影响签到。
+每个渠道都可单独配置。配置多个时会向所有已配置渠道发送，任一接口接收成功即视为推送成功。
+
+使用 GitHub Actions 时，在仓库的 `Settings → Secrets and variables → Actions` 中新建仓库 Secret `PUSHPLUS_TOKEN`，填入 Token，再从 `Actions → GLaDOS Check-in` 手动运行一次。使用 Edge 或 Firefox 扩展时，在扩展的「设置 → 远程推送」中填写同一个 Token，保存后点「发送测试推送」。PushPlus 默认通过微信服务号推送，也可使用该 Token 在 PushPlus 中配置的渠道。
 
 ### 推送效果
 
@@ -374,6 +366,11 @@ Windows PowerShell 用 `$env:GLADOS_COOKIES='[...]'`。
 - 推送兼容 Server酱。
 
 **2026-11**
+
+**1.1.0**
+
+- GitHub Actions、Edge 和 Firefox 扩展支持 PushPlus 推送。
+- 加入 Firefox 扩展打包脚本和本地安装说明。
 
 **1.0.1**
 
